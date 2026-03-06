@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Birthday Mission</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,700&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --maroon: #522829;
+            --beige: #f5ede4;
+            --dark-beige: #e5ddd4;
+            --rose-pink: #d4a5a5;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        html, body {
+            height: 100%; width: 100%; margin: 0; padding: 0;
+            background-color: var(--beige); color: var(--maroon);
+            font-family: 'Crimson Text', serif; overflow: hidden;
+        }
+
+        .app-viewport {
+            height: 100%; width: 100%; display: flex;
+            flex-direction: column; align-items: center; justify-content: center; padding: 20px;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border-radius: 30px; width: 100%; max-width: 330px;
+            height: 85%; max-height: 600px; display: flex; flex-direction: column;
+            padding: 20px; box-shadow: 0 15px 35px rgba(82, 40, 41, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.5); position: relative;
+        }
+
+        .hidden { display: none !important; }
+        header { text-align: center; margin-bottom: 20px; flex-shrink: 0; }
+        h1 { font-size: 1.8rem; margin: 0; }
+        .subtitle { font-family: 'Montserrat', sans-serif; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px; opacity: 0.7; }
+
+        .game-content { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; }
+        
+        /* Memory Grid */
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; }
+        .card {
+            aspect-ratio: 1/1; background-color: var(--maroon); border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+            color: transparent; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .card.flipped { background-color: white; color: var(--maroon); transform: rotateY(180deg); }
+        .card.matched { background-color: var(--dark-beige); opacity: 0.4; transform: scale(0.9); }
+
+        /* Dots */
+        #canvas-wrap { position: relative; width: 100%; aspect-ratio: 1/1; }
+        canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; z-index: 1; pointer-events: none; }
+        .dot { 
+            position: absolute; width: 28px; height: 28px; background: var(--maroon); 
+            color: var(--beige); border-radius: 50%; display: flex; align-items: center; 
+            justify-content: center; font-size: 0.8rem; font-weight: bold; z-index: 2;
+        }
+
+        /* Flight Path Fixed */
+        .slider-box { width: 100%; padding: 20px 0; text-align: center; position: relative; }
+        .flight-line {
+            position: absolute; top: 38px; left: 10px; right: 10px;
+            height: 2px; border-top: 2px dashed var(--maroon); opacity: 0.3; z-index: 0;
+        }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 1; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 40px; width: 40px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23522829"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>') center no-repeat;
+            background-size: contain; border: none; cursor: pointer;
+        }
+
+        /* Jar Fixed - Hearts Pouring */
+        .jar-box { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; position: relative; }
+        #jar {
+            width: 100px; height: 150px;
+            border: 3px solid rgba(82, 40, 41, 0.4);
+            border-radius: 10px 10px 40px 40px;
+            position: relative; background: rgba(255, 255, 255, 0.2);
+            overflow: hidden; touch-action: none;
+        }
+        .mini-heart {
+            position: absolute; font-size: 1.2rem; color: var(--maroon);
+            bottom: 0; animation: pour 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        @keyframes pour {
+            0% { transform: translateY(-180px) rotate(0deg); opacity: 0; }
+            40% { opacity: 1; }
+            100% { transform: translateY(var(--y)) rotate(var(--r)); opacity: 1; }
+        }
+
+        .btn-action {
+            background: var(--maroon); color: var(--beige); border: none;
+            padding: 15px 30px; border-radius: 50px; font-weight: 600;
+            width: 100%; margin-top: 15px; font-family: 'Montserrat', sans-serif;
+        }
+
+        .letter { line-height: 1.7; font-size: 1.1rem; animation: fadeIn 1s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="app-viewport">
+    <div class="glass-panel" id="panel">
+        
+        <div id="sec1" class="game-content">
+            <header>
+                <h1>Level 01</h1>
+                <div class="subtitle">Match the symbols</div>
+            </header>
+            <div class="grid" id="grid"></div>
+            <button id="btn1" class="btn-action hidden" onclick="go(2)">Next Chapter</button>
+        </div>
+
+        <div id="sec2" class="game-content hidden">
+            <header>
+                <h1>Level 02</h1>
+                <div class="subtitle">Connect our hearts</div>
+            </header>
+            <div id="canvas-wrap"><canvas id="canvas"></canvas></div>
+        </div>
+
+        <div id="sec3" class="game-content hidden">
+            <header>
+                <h1>Level 03</h1>
+                <div class="subtitle">Jakarta ✈ Borken</div>
+            </header>
+            <div class="slider-box">
+                <div class="flight-line"></div>
+                <input type="range" min="0" max="100" value="0" id="slide" oninput="updateFlight(this.value)">
+                <h2 style="font-family: Montserrat; margin-top: 30px;"><span id="dist">10,900</span> KM</h2>
+                <button id="btn3" class="btn-action hidden" onclick="go(4)">Almost Home</button>
+            </div>
+        </div>
+
+        <div id="sec4" class="game-content hidden">
+            <header>
+                <h1>Final Step</h1>
+                <div class="subtitle">Hold the jar to pour my heart in</div>
+            </header>
+            <div class="jar-box">
+                <div id="jar"></div>
+                <p id="jar-hint" style="margin-top: 15px; font-style: italic; font-size: 0.9rem;">Press and Hold the Jar</p>
+            </div>
+        </div>
+
+        <div id="sec5" class="game-content hidden" style="justify-content: flex-start; overflow-y: auto;">
+            <div class="letter">
+                <h2 style="margin-top:0">Happy 17th Birthday! ❤︎</h2>
+                <p>From the heat of <b>Jakarta</b> to the streets of <b>Borken</b>, you are the most beautiful part of my world.</p>
+                <p>You’ve navigated the memories, connected the heart, crossed the ocean, and filled the jar.</p>
+                <p>Distance is just a number. My heart is wherever you are.</p>
+                <p><b>I love you!</b></p>
+                <p style="text-align: right; margin-top: 20px;">— Yours Always, Jeje.</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function go(n) {
+        document.querySelectorAll('.game-content').forEach(s => s.classList.add('hidden'));
+        document.getElementById('sec'+n).classList.remove('hidden');
+        if(n===2) initDots();
+        if(n===4) initJar();
+    }
+
+    // --- MEMORY ---
+    const syms = ['❤︎','❤︎','★','★','☘︎','☘︎','𝄞','𝄞','❤︎','❤︎','★','★','☘︎','☘︎','𝄞','𝄞'];
+    let flip = [], matches = 0;
+    syms.sort(() => 0.5 - Math.random());
+    syms.forEach(s => {
+        const c = document.createElement('div'); c.className='card'; c.dataset.s=s;
+        c.onclick = function() {
+            if(flip.length < 2 && !this.classList.contains('flipped')) {
+                this.classList.add('flipped'); this.innerHTML = this.dataset.s; flip.push(this);
+                if(flip.length === 2) setTimeout(() => {
+                    if(flip[0].dataset.s === flip[1].dataset.s) { flip.forEach(x=>x.classList.add('matched')); matches++; }
+                    else { flip.forEach(x=>{x.classList.remove('flipped'); x.innerHTML='';}); }
+                    flip = [];
+                    if(matches===8) document.getElementById('btn1').classList.remove('hidden');
+                }, 500);
+            }
+        };
+        document.getElementById('grid').appendChild(c);
+    });
+
+    // --- DOTS ---
+    function initDots() {
+        const wrap = document.getElementById('canvas-wrap');
+        const cvs = document.getElementById('canvas'); const ctx = cvs.getContext('2d');
+        const rect = wrap.getBoundingClientRect();
+        cvs.width = rect.width; cvs.height = rect.height;
+        const pts = [{x:0.5,y:0.3},{x:0.7,y:0.15},{x:0.9,y:0.3},{x:0.9,y:0.6},{x:0.5,y:0.9},{x:0.1,y:0.6},{x:0.1,y:0.3},{x:0.3,y:0.15},{x:0.5,y:0.3}];
+        let curr = 0; ctx.strokeStyle = '#522829'; ctx.lineWidth = 4; ctx.lineCap='round';
+        pts.forEach((p, i) => {
+            if(i===8) return;
+            const d = document.createElement('div'); d.className='dot'; d.innerHTML=i+1;
+            d.style.left = (p.x*cvs.width - 14)+'px'; d.style.top = (p.y*cvs.height - 14)+'px';
+            d.onclick = () => {
+                if(i === curr) {
+                    if(curr > 0) { 
+                        ctx.beginPath(); ctx.moveTo(pts[curr-1].x*cvs.width, pts[curr-1].y*cvs.height); 
+                        ctx.lineTo(pts[curr].x*cvs.width, pts[curr].y*cvs.height); ctx.stroke(); 
+                    }
+                    curr++; d.style.background = '#d4a5a5';
+                    if(curr === 8) { ctx.lineTo(pts[8].x*cvs.width, pts[8].y*cvs.height); ctx.stroke(); setTimeout(() => go(3), 1000); }
+                }
+            };
+            wrap.appendChild(d);
+        });
+    }
+
+    // --- FLIGHT ---
+    function updateFlight(v) {
+        document.getElementById('dist').innerHTML = (10900 - (v*109)).toLocaleString();
+        if(v >= 100) document.getElementById('btn3').classList.remove('hidden');
+    }
+
+    // --- POURING JAR FIXED ---
+    function initJar() {
+        const jar = document.getElementById('jar');
+        let timer, count = 0;
+        const target = 30;
+
+        const start = (e) => {
+            e.preventDefault();
+            timer = setInterval(() => {
+                if(count < target) {
+                    const h = document.createElement('div');
+                    h.className = 'mini-heart';
+                    h.innerHTML = '❤︎';
+                    
+                    // Random horizontal start within jar
+                    const xPos = Math.random() * 70 + 5; 
+                    // Random settled height (Y) and rotation (R)
+                    const finalY = -(Math.floor(count / 5) * 18 + Math.random() * 10);
+                    const finalR = (Math.random() * 40 - 20) + 'deg';
+
+                    h.style.left = xPos + 'px';
+                    h.style.setProperty('--y', finalY + 'px');
+                    h.style.setProperty('--r', finalR);
+
+                    jar.appendChild(h);
+                    count++;
+                } else {
+                    clearInterval(timer);
+                    setTimeout(() => go(5), 1000);
+                }
+            }, 180);
+        };
+
+        const stop = () => clearInterval(timer);
+
+        jar.addEventListener('touchstart', start);
+        jar.addEventListener('touchend', stop);
+        jar.addEventListener('mousedown', start);
+        jar.addEventListener('mouseup', stop);
+    }
+</script>
+
+</body>
+</html>
